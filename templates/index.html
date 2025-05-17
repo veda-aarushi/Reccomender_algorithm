@@ -3,15 +3,33 @@
 <head>
   <meta charset="utf-8">
   <title>Recommender Demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    label, button { display: block; margin: 0.5rem 0; }
+    #results li { margin-bottom: 0.25rem; }
+    #train-status { margin-top: 0.5rem; font-weight: bold; }
+  </style>
 </head>
 <body>
   <h1>Content-Based Recommender</h1>
+
+  <h2>1) Train the model</h2>
+  <p>Click below to train on <code>data/patagonia.csv</code>:</p>
+  <button id="train-btn">Train</button>
+  <div id="train-status"></div>
+
+  <h2>2) Get Recommendations</h2>
   <form id="rec-form">
     <label for="item_id">Item ID:</label>
     <input type="number" id="item_id" name="item_id" required>
 
     <label for="n"># Recommendations:</label>
     <input type="number" id="n" name="n" value="5" min="1">
+
+    <label>
+      <input type="checkbox" id="use_fallback" checked>
+      Enable fallback
+    </label>
 
     <button type="submit">Get Recommendations</button>
   </form>
@@ -20,18 +38,37 @@
   <ul id="results"></ul>
 
   <script>
+    // TRAIN BUTTON HANDLER
+    document.getElementById('train-btn').addEventListener('click', async () => {
+      const statusEl = document.getElementById('train-status');
+      statusEl.textContent = 'Training…';
+      const res = await fetch('/train', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({csv_path: 'data/patagonia.csv'})
+      });
+      const data = await res.json().catch(() => ({error:'Invalid JSON'}));
+      statusEl.textContent = res.ok
+        ? 'Training complete ✅'
+        : `Error: ${data.error || res.statusText}`;
+    });
+
+    // RECOMMEND FORM HANDLER
     document.getElementById('rec-form').addEventListener('submit', async e => {
       e.preventDefault();
       const itemId = document.getElementById('item_id').value;
       const n = document.getElementById('n').value;
-      const res = await fetch(`/recommend/${itemId}?n=${n}`);
+      const useFb = document.getElementById('use_fallback').checked;
       const listEl = document.getElementById('results');
-      if (!res.ok) {
-        listEl.innerHTML = `<li>Error: ${res.status} ${res.statusText}</li>`;
+
+      const res = await fetch(`/recommend/${itemId}?n=${n}&fallback=${useFb}`);
+      const data = await res.json().catch(() => ({error:'Invalid JSON'}));
+
+      if (!res.ok || data.error) {
+        listEl.innerHTML = `<li style="color:red">Error: ${data.error || res.statusText}</li>`;
         return;
       }
-      const data = await res.json();
-      if (data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         listEl.innerHTML = '<li>No recommendations found</li>';
         return;
       }
