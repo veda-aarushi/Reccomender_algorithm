@@ -1,32 +1,33 @@
 import pandas as pd
 import redis
+import config
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
 class ContentEngine:
     SIMKEY = "p:smlr:%s"
 
-    def __init__(self, redis_url="redis://localhost:6379/0"):
-        # connect to Redis
+    def __init__(self, redis_url: str = config.REDIS_URL):
+        # connect to Redis via our config
         self._r = redis.from_url(redis_url)
         self.df = None
         self.last_csv = None
 
-    def train(self, csv_path):
+    def train(self, csv_path: str):
         # load & remember the dataframe
         df = pd.read_csv(csv_path)
         self.df = df
         self.last_csv = csv_path
 
-        # build TF-IDF matrix over descriptions
+        # build TF-IDF and cosine similarity
         tf = TfidfVectorizer(ngram_range=(1, 3), stop_words="english")
         matrix = tf.fit_transform(df["description"])
         sims = linear_kernel(matrix, matrix)
 
-        # clear any prior data
+        # clear old data
         self._r.flushdb()
 
-        # for each item, store top-100 similarities
+        # store top-100 similarities per item
         for idx, row in df.iterrows():
             top_idxs = sims[idx].argsort()[:-101:-1]
             mapping = {
@@ -35,17 +36,11 @@ class ContentEngine:
             }
             self._r.zadd(self.SIMKEY % int(row["id"]), mapping)
 
-    def predict(self, item_id, n=5, use_fallback=True):
-        """
-        Returns up to n recommendations for the given item_id.
-        If use_fallback=True and fewer than n are in Redis,
-        fill the rest from the original CSV ordering at score=0.
-        """
+    def predict(self, item_id: int, n: int = config.DEFAULT_N, use_fallback: bool = True):
         key = self.SIMKEY % int(item_id)
         raw = self._r.zrange(key, 0, n - 1, withscores=True, desc=True)
         results = [{"id": int(m.decode()), "score": s} for m, s in raw]
 
-        # fallback to CSV order if needed
         if use_fallback and self.df is not None and len(results) < n:
             seen = {r["id"] for r in results}
             for other in self.df["id"]:
