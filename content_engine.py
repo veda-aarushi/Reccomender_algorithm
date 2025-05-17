@@ -1,19 +1,25 @@
+# content_engine.py
+
 import pandas as pd
 import redis
 import config
-import tensorflow as tf
-from tensorflow.keras import layers, Model
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.models import Model
+
+
 def build_autoencoder(input_dim: int, latent_dim: int):
-    inputs = layers.Input(shape=(input_dim,))
-    encoded = layers.Dense(latent_dim, activation="relu")(inputs)
-    decoded = layers.Dense(input_dim, activation="sigmoid")(encoded)
+    inputs = Input(shape=(input_dim,))
+    encoded = Dense(latent_dim, activation="relu")(inputs)
+    decoded = Dense(input_dim, activation="sigmoid")(encoded)
     autoencoder = Model(inputs, decoded)
     encoder = Model(inputs, encoded)
     autoencoder.compile(optimizer="adam", loss="binary_crossentropy")
     return autoencoder, encoder
+
 
 class ContentEngine:
     SIMKEY = "p:smlr:%s"
@@ -31,6 +37,7 @@ class ContentEngine:
         tfidf = TfidfVectorizer(ngram_range=(1, 3), stop_words="english")
         matrix = tfidf.fit_transform(df["description"])
 
+        # choose model type
         if config.MODEL_TYPE == "autoencoder":
             X = matrix.toarray()
             autoencoder, encoder = build_autoencoder(X.shape[1], config.LATENT_DIM)
