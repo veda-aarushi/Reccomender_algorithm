@@ -1,23 +1,29 @@
-from flask import Flask, render_template
-from flask_restx import Api, Resource, fields, reqparse
+from flask import Flask, request, jsonify, render_template
 from flask_httpauth import HTTPBasicAuth
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from prometheus_flask_exporter import PrometheusMetrics
+from flask_restx import Api, Resource, fields, reqparse
 from redis.exceptions import RedisError
+
 import config
 from content_engine import ContentEngine
 from tasks import train_task
 
 app = Flask(__name__, template_folder="templates")
-# <<< ADD THIS BACK IN >>>
+
+# Expose Prometheus metrics on /metrics
+metrics = PrometheusMetrics(app)
+
+# Serve the UI at the root
 @app.route("/")
 def index():
     return render_template("index.html")
-# <<< END ADD >>>
 
-# Auth
+# Basic auth for /train
 auth = HTTPBasicAuth()
-USERS = {"admin": "secret"}
+USERS = {"admin": "secret"}  # TODO: secure properly
+
 @auth.verify_password
 def verify(username, password):
     return USERS.get(username) == password
@@ -26,7 +32,7 @@ def verify(username, password):
 limiter = Limiter(key_func=get_remote_address, default_limits=["100 per hour"])
 limiter.init_app(app)
 
-# Swagger / RESTX
+# Swagger / RESTX setup
 api = Api(app, version="1.0", title="Recommender API", doc="/docs")
 
 engine = ContentEngine()
