@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Recommender Demo</title>
+</head>
+<body>
+  <h1>Content-Based Recommender</h1>
+  <form id="rec-form">
+    <label for="item_id">Item ID:</label>
+    <input type="number" id="item_id" name="item_id" required>
+
+    <label for="n"># Recommendations:</label>
+    <input type="number" id="n" name="n" value="5" min="1">
+
+    <button type="submit">Get Recommendations</button>
+  </form>
+
+  <h2>Results</h2>
+  <ul id="results"></ul>
+
+  <script>
+    document.getElementById('rec-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const itemId = document.getElementById('item_id').value;
+      const n = document.getElementById('n').value;
+      const res = await fetch(`/recommend/${itemId}?n=${n}`);
+      const listEl = document.getElementById('results');
+      if (!res.ok) {
+        listEl.innerHTML = `<li>Error: ${res.status} ${res.statusText}</li>`;
+        return;
+      }
+      const data = await res.json();
+      if (data.length === 0) {
+        listEl.innerHTML = '<li>No recommendations found</li>';
+        return;
+      }
+      listEl.innerHTML = data
+        .map(r => `<li>Item ${r.id} — similarity ${r.score.toFixed(3)}</li>`)
+        .join('');
+    });
+  </script>
+</body>
+</html>
