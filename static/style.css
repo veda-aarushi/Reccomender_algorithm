@@ -1,0 +1,68 @@
+/* Reset & base */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', sans-serif; }
+
+/* Top bar */
+.topbar {
+  position: fixed; top: 0; width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  background: white; padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 100;
+}
+.logo { font-size: 1.5rem; font-weight: 700; color: #7b2cbf; }
+.topnav a {
+  margin-left: 1.5rem; text-decoration: none; color: #333;
+  font-weight: 500; transition: color 0.2s;
+}
+.topnav a:hover { color: #ff477e; }
+
+/* Hero */
+.hero {
+  height: 100vh; padding-top: 80px; /* reserve topbar */
+  background: linear-gradient(135deg, #7b2cbf 0%, #ff477e 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: white; text-align: center;
+}
+.hero-content h1 {
+  font-size: 3rem; margin-bottom: 2rem;
+}
+
+/* Search card */
+.search-card {
+  background: white; padding: 2rem; border-radius: 12px;
+  max-width: 360px; width: 100%;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+.tabs {
+  display: flex; margin-bottom: 1rem; border-radius: 8px;
+  overflow: hidden; border: 1px solid #ddd;
+}
+.tab {
+  flex: 1; padding: 0.75rem 0; background: #fafafa;
+  border: none; cursor: pointer; font-weight: 500; color: #555;
+  transition: background 0.2s;
+}
+.tab.active {
+  background: #7b2cbf; color: white;
+}
+input[type="number"] {
+  width: 100%; padding: 0.75rem; margin-bottom: 1rem;
+  border: 1px solid #ccc; border-radius: 8px;
+}
+.btn-hero {
+  width: 100%; padding: 0.75rem;
+  background: #ff477e; border: none; border-radius: 8px;
+  color: white; font-size: 1rem; font-weight: 500; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-hero:hover { background: #e63060; }
+
+/* Results section */
+#results {
+  max-width: 500px; margin: 2rem auto; padding: 0 1rem;
+}
+.result-item {
+  display: flex; justify-content: space-between;
+  background: white; padding: 1rem; border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;
+}

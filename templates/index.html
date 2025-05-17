@@ -2,79 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Recommender Demo</title>
-  <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
-    label, button { display: block; margin: 0.5rem 0; }
-    #results li { margin-bottom: 0.25rem; }
-    #train-status { margin-top: 0.5rem; font-weight: bold; }
-  </style>
+  <title>Recommender Done Right</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap"
+    rel="stylesheet"
+  >
 </head>
 <body>
-  <h1>Content-Based Recommender</h1>
+  <!-- top bar -->
+  <header class="topbar">
+    <div class="logo">Reco</div>
+    <nav class="topnav">
+      <a href="#" id="train-btn">Train Data</a>
+    </nav>
+  </header>
 
-  <h2>1) Train the model</h2>
-  <p>Click below to train on <code>data/patagonia.csv</code>:</p>
-  <button id="train-btn">Train</button>
-  <div id="train-status"></div>
+  <!-- hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Recommendations Done Right. Finally.</h1>
+      <div class="search-card">
+        <div class="tabs">
+          <button class="tab active" data-mode="content">Content-Based</button>
+          <button class="tab" data-mode="collaborative">Collaborative</button>
+        </div>
+        <input id="item_id" type="number" placeholder="Enter Item ID">
+        <button id="search-btn" class="btn-hero">Get Recommendations</button>
+      </div>
+    </div>
+  </section>
 
-  <h2>2) Get Recommendations</h2>
-  <form id="rec-form">
-    <label for="item_id">Item ID:</label>
-    <input type="number" id="item_id" name="item_id" required>
-
-    <label for="n"># Recommendations:</label>
-    <input type="number" id="n" name="n" value="5" min="1">
-
-    <label>
-      <input type="checkbox" id="use_fallback" checked>
-      Enable fallback
-    </label>
-
-    <button type="submit">Get Recommendations</button>
-  </form>
-
-  <h2>Results</h2>
-  <ul id="results"></ul>
+  <!-- results -->
+  <section id="results"></section>
 
   <script>
-    // TRAIN BUTTON HANDLER
-    document.getElementById('train-btn').addEventListener('click', async () => {
-      const statusEl = document.getElementById('train-status');
-      statusEl.textContent = 'Training…';
-      const res = await fetch('/train', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({csv_path: 'data/patagonia.csv'})
+    // tab toggle
+    let mode = 'content';
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelector('.tab.active').classList.remove('active');
+        btn.classList.add('active');
+        mode = btn.dataset.mode;
       });
-      const data = await res.json().catch(() => ({error:'Invalid JSON'}));
-      statusEl.textContent = res.ok
-        ? 'Training complete ✅'
-        : `Error: ${data.error || res.statusText}`;
     });
 
-    // RECOMMEND FORM HANDLER
-    document.getElementById('rec-form').addEventListener('submit', async e => {
+    // Train Data button
+    document.getElementById('train-btn').addEventListener('click', async e => {
       e.preventDefault();
-      const itemId = document.getElementById('item_id').value;
-      const n = document.getElementById('n').value;
-      const useFb = document.getElementById('use_fallback').checked;
-      const listEl = document.getElementById('results');
+      await fetch('/train', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({csv_path:'data/patagonia.csv'})
+      });
+      alert('Training complete ✅');
+    });
 
-      const res = await fetch(`/recommend/${itemId}?n=${n}&fallback=${useFb}`);
-      const data = await res.json().catch(() => ({error:'Invalid JSON'}));
-
-      if (!res.ok || data.error) {
-        listEl.innerHTML = `<li style="color:red">Error: ${data.error || res.statusText}</li>`;
-        return;
-      }
+    // Search button
+    document.getElementById('search-btn').addEventListener('click', async () => {
+      const id = document.getElementById('item_id').value;
+      if (!id) return alert('Please enter an Item ID');
+      const fallback = mode === 'content';
+      const res = await fetch(`/recommend/${id}?n=5&fallback=${fallback}`);
+      if (!res.ok) return alert('Error fetching recommendations');
+      const data = await res.json();
+      const container = document.getElementById('results');
+      container.innerHTML = '';
       if (!Array.isArray(data) || data.length === 0) {
-        listEl.innerHTML = '<li>No recommendations found</li>';
-        return;
+        container.innerHTML = '<div class="result-item">No recommendations found</div>';
+      } else {
+        data.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'result-item';
+          div.innerHTML = `<span>Item ${r.id}</span><span>${r.score.toFixed(3)}</span>`;
+          container.appendChild(div);
+        });
       }
-      listEl.innerHTML = data
-        .map(r => `<li>Item ${r.id} — similarity ${r.score.toFixed(3)}</li>`)
-        .join('');
     });
   </script>
 </body>
